@@ -1,7 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from '../utils/db.js';
 import { verifyAuth } from '../utils/auth.js';
-import * as whoGrowth from 'who-growth';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const whoGrowth = require('who-growth');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);
