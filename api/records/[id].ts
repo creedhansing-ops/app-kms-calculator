@@ -1,9 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from '../utils/db.js';
 import { verifyAuth } from '../utils/auth.js';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const whoGrowth = require('who-growth');
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);
   if (!user) return;
@@ -26,43 +24,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Record not found' });
       }
 
-      // Real WHO Z-Score calculation using who-growth
-      const sdMap: Record<string, number> = {
-        "SD4": 4, "SD3": 3, "SD2": 2, "SD1": 1, "SD0": 0, "Median": 0,
-        "SD1neg": -1, "SD2neg": -2, "SD3neg": -3, "SD4neg": -4
-      };
-      
+      // Real WHO Z-Score calculation using native LMS formula
       let calcWFA = zScoreWFA || 0;
       let calcHFA = zScoreHFA || 0;
       let calcWFH = zScoreWFH || 0;
       let calcBMI = zScoreBMI || 0;
 
       try {
-        const { Calculator, Patient } = whoGrowth as any;
-        const patientData = {
-          name: "Child",
-          birthDate: new Date(existingRecord.patient.dateOfBirth),
-          weight: parseFloat(weight),
-          height: parseFloat(height),
-          sex: existingRecord.patient.gender === 'L' ? 'Male' : 'Female'
-        };
-        const child = Patient.new(patientData);
-        const zCalc = Calculator.load("ZScore", child);
+        const diffTime = Math.abs(new Date(existingRecord.date).getTime() - new Date(existingRecord.patient.dateOfBirth).getTime());
+        const ageInMonths = Math.floor(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) / 30.44);
         
-        calcWFA = sdMap[zCalc.calculateWeightForAge()] ?? calcWFA;
-        calcHFA = sdMap[zCalc.calculateHeightForAge()] ?? calcHFA;
-        calcWFH = sdMap[zCalc.calculateWeightForHeight()] ?? calcWFH;
-        
-        try {
-          calcBMI = sdMap[zCalc.calculateBMIForAge()] ?? calcBMI;
-        } catch (err) {
-          const bmiVal = parseFloat(weight) / ((parseFloat(height)/100)*(parseFloat(height)/100));
-          if (bmiVal > 25) calcBMI = 3;
-          else if (bmiVal < 14) calcBMI = -3;
-          else calcBMI = 0;
-        }
+        const zScores = (await import('../utils/zscore-calculator.js')).calculateAllZScores(
+          existingRecord.patient.gender as 'L' | 'P',
+          ageInMonths,
+          parseFloat(weight),
+          parseFloat(height)
+        );
+        calcWFA = zScores.calcWFA;
+        calcHFA = zScores.calcHFA;
+        calcWFH = zScores.calcWFH;
+        calcBMI = zScores.calcBMI;
       } catch (e) {
-        console.error('who-growth calculation failed:', e);
+        console.error('WHO calculation failed:', e);
       }
 
       const updated = await prisma.anthropometryRecord.update({
