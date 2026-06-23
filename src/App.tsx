@@ -63,9 +63,9 @@ export default function App() {
       {/* Sidebar Navigation */}
       <aside className={`sidebar ${isSidebarMinimized ? 'minimized' : ''} ${isMobileSidebarOpen ? 'mobile-open' : ''}`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="logo">
+          <div className="logo" style={{ justifyContent: isSidebarMinimized ? 'center' : 'flex-start', width: '100%' }}>
             <Activity size={32} color="var(--color-primary)" />
-            <span>KMS Digital</span>
+            {!isSidebarMinimized && <span>KMS Digital</span>}
           </div>
           {isMobileSidebarOpen && (
              <button onClick={() => setIsMobileSidebarOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--color-foreground)', cursor: 'pointer' }}>
@@ -75,46 +75,48 @@ export default function App() {
         </div>
         
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '32px' }}>
-          <Link to="/" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}>
+          <Link to="/" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname === '/' ? 'active' : ''}`} style={{ justifyContent: isSidebarMinimized ? 'center' : 'flex-start' }}>
             <Activity size={20} />
-            <span className="nav-text">Dashboard</span>
+            {!isSidebarMinimized && <span className="nav-text">Dashboard</span>}
           </Link>
-          <Link to="/patients" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname.startsWith('/patients') ? 'active' : ''}`}>
+          <Link to="/patients" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname.startsWith('/patients') ? 'active' : ''}`} style={{ justifyContent: isSidebarMinimized ? 'center' : 'flex-start' }}>
             <Users size={20} />
-            <span className="nav-text">Data Pasien</span>
+            {!isSidebarMinimized && <span className="nav-text">Data Pasien</span>}
           </Link>
-          <Link to="/settings" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname === '/settings' ? 'active' : ''}`}>
+          <Link to="/settings" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname === '/settings' ? 'active' : ''}`} style={{ justifyContent: isSidebarMinimized ? 'center' : 'flex-start' }}>
             <Settings size={20} />
-            <span className="nav-text">Pengaturan</span>
+            {!isSidebarMinimized && <span className="nav-text">Pengaturan</span>}
           </Link>
         </nav>
 
-        <div className="user-info" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius-md)' }}>
+        <div className="user-info" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: isSidebarMinimized ? 'center' : 'flex-start', gap: '12px', padding: isSidebarMinimized ? '12px' : '16px', backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius-md)' }}>
           <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
             <User size={20} />
           </div>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 600, fontSize: '14px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{userProfile.name}</div>
-            <div style={{ fontSize: '12px', opacity: 0.7, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{userProfile.clinic || 'Klinik / Puskesmas'}</div>
-          </div>
+          {!isSidebarMinimized && (
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontWeight: 600, fontSize: '14px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{userProfile.name}</div>
+              <div style={{ fontSize: '12px', opacity: 0.7, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{userProfile.clinic || 'Klinik / Puskesmas'}</div>
+            </div>
+          )}
         </div>
         
         <div style={{ padding: '24px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button 
             onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#0d9488', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px', width: '100%', justifyContent: isSidebarMinimized ? 'center' : 'flex-start' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#0d9488', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: isSidebarMinimized ? '12px 0' : '12px 16px', width: '100%', justifyContent: isSidebarMinimized ? 'center' : 'flex-start' }}
           >
             <LogOut size={20} />
-            <span className="logout-text">Keluar</span>
+            {!isSidebarMinimized && <span className="logout-text">Keluar</span>}
           </button>
 
           {/* Desktop Minimize Toggle */}
           <button 
             onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--color-foreground)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px', width: '100%', justifyContent: isSidebarMinimized ? 'center' : 'flex-start', opacity: 0.5 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--color-foreground)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: isSidebarMinimized ? '12px 0' : '12px 16px', width: '100%', justifyContent: isSidebarMinimized ? 'center' : 'flex-start', opacity: 0.5 }}
           >
             {isSidebarMinimized ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-            <span className="logout-text">Minimize</span>
+            {!isSidebarMinimized && <span className="logout-text">Minimize</span>}
           </button>
         </div>
       </aside>
