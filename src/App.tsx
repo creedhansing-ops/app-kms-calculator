@@ -18,6 +18,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState<{name: string, clinic?: string, rmPrefix?: string}>({ name: 'Ahli Gizi', clinic: 'Puskesmas' });
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('kms_user');
+    if (userStr) {
+      try { setUserProfile(JSON.parse(userStr)); } catch(e){}
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('kms_token');
@@ -62,8 +70,8 @@ export default function App() {
             <User size={20} />
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: '14px' }}>Ahli Gizi</div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>Puskesmas Pusat</div>
+            <div style={{ fontWeight: 600, fontSize: '14px' }}>{userProfile.name}</div>
+            <div style={{ fontSize: '12px', opacity: 0.7 }}>{userProfile.clinic || 'Klinik / Puskesmas'}</div>
           </div>
         </div>
         
@@ -88,14 +96,7 @@ export default function App() {
           } />
           <Route path="/patients" element={<ProtectedRoute><PatientList /></ProtectedRoute>} />
           <Route path="/patients/:id" element={<ProtectedRoute><PatientDetail /></ProtectedRoute>} />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <div className="neumorphic-card">
-                <h2 style={{ marginBottom: '16px' }}>Pengaturan</h2>
-                <p style={{ color: '#64748b' }}>Konfigurasi sistem akan segera hadir.</p>
-              </div>
-            </ProtectedRoute>
-          } />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage onUpdateProfile={(newProf) => setUserProfile(prev => ({...prev, ...newProf}))} /></ProtectedRoute>} />
         </Routes>
       </main>
     </div>
@@ -202,17 +203,26 @@ function PatientList() {
   }, []);
 
   const getNextRmNumber = () => {
+    const userStr = localStorage.getItem('kms_user');
+    let prefix = 'RM-';
+    if (userStr) {
+      try { 
+        const u = JSON.parse(userStr);
+        if (u.rmPrefix) prefix = u.rmPrefix;
+      } catch(e){}
+    }
+
     let maxNum = 0;
     patients.forEach(p => {
-      if (p.rmNumber && p.rmNumber.startsWith('RM-')) {
-        const numPart = p.rmNumber.replace('RM-', '');
+      if (p.rmNumber && p.rmNumber.startsWith(prefix)) {
+        const numPart = p.rmNumber.replace(prefix, '');
         const num = parseInt(numPart, 10);
         if (!isNaN(num) && num > maxNum) {
           maxNum = num;
         }
       }
     });
-    return `RM-${String(maxNum + 1).padStart(3, '0')}`;
+    return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
   };
 
   return (
@@ -469,3 +479,176 @@ function PatientDetail() {
   );
 }
 
+function SettingsPage({ onUpdateProfile }: { onUpdateProfile: (prof: any) => void }) {
+  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
+  const [profileForm, setProfileForm] = useState({ name: '', clinic: '', rmPrefix: 'RM-' });
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '' });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('kms_token');
+        const res = await fetch('/api/settings', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setProfileForm({ name: data.name || '', clinic: data.clinic || '', rmPrefix: data.rmPrefix || 'RM-' });
+          
+          // update localstorage
+          const oldStr = localStorage.getItem('kms_user');
+          if (oldStr) {
+            const old = JSON.parse(oldStr);
+            const merged = { ...old, ...data };
+            localStorage.setItem('kms_user', JSON.stringify(merged));
+            onUpdateProfile(merged);
+          }
+        }
+      } catch (err) {}
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('kms_token');
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(profileForm)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert('Profil berhasil diperbarui!');
+        const oldStr = localStorage.getItem('kms_user');
+        if (oldStr) {
+          const old = JSON.parse(oldStr);
+          const merged = { ...old, ...data };
+          localStorage.setItem('kms_user', JSON.stringify(merged));
+          onUpdateProfile(merged);
+        }
+      } else {
+        alert('Gagal memperbarui profil');
+      }
+    } catch (err) {}
+    setLoading(false);
+  };
+
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('kms_token');
+      const res = await fetch('/api/settings/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(passwordForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Password berhasil diubah!');
+        setPasswordForm({ oldPassword: '', newPassword: '' });
+      } else {
+        alert(`Gagal: ${data.error}`);
+      }
+    } catch (err) {}
+    setLoading(false);
+  };
+
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem('kms_token');
+      const res = await fetch('/api/export', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "laporan_kms_digital.csv";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert('Gagal mengekspor data');
+      }
+    } catch (err) {
+      alert('Terjadi kesalahan saat mengekspor data');
+    }
+  };
+
+  return (
+    <div>
+      <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1>Pengaturan Sistem</h1>
+          <p>Kustomisasi profil, keamanan, dan ekspor data.</p>
+        </div>
+        <button onClick={handleExport} className="neumorphic-button primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Download size={20} />
+          Unduh CSV Pasien
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '32px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <button onClick={() => setActiveTab('profile')} className={`neumorphic-button ${activeTab === 'profile' ? 'primary' : ''}`} style={{ textAlign: 'left', background: activeTab === 'profile' ? '' : 'transparent', boxShadow: activeTab === 'profile' ? '' : 'none', border: '1px solid var(--color-border)' }}>
+            Profil & Preferensi
+          </button>
+          <button onClick={() => setActiveTab('security')} className={`neumorphic-button ${activeTab === 'security' ? 'primary' : ''}`} style={{ textAlign: 'left', background: activeTab === 'security' ? '' : 'transparent', boxShadow: activeTab === 'security' ? '' : 'none', border: '1px solid var(--color-border)' }}>
+            Keamanan Akun
+          </button>
+        </div>
+
+        <div className="neumorphic-card">
+          {activeTab === 'profile' && (
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ marginBottom: '8px' }}>Profil Puskesmas / Klinik</h3>
+              <div>
+                <label className="form-label">Nama Lengkap (Ahli Gizi / Dokter)</label>
+                <input required type="text" className="neumorphic-input" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} />
+              </div>
+              <div>
+                <label className="form-label">Nama Fasilitas Kesehatan</label>
+                <input required type="text" className="neumorphic-input" value={profileForm.clinic} onChange={e => setProfileForm({...profileForm, clinic: e.target.value})} />
+              </div>
+
+              <h3 style={{ marginTop: '16px', marginBottom: '8px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>Kustomisasi Nomor Rekam Medis</h3>
+              <div>
+                <label className="form-label">Awalan (Prefix) Rekam Medis</label>
+                <input required type="text" className="neumorphic-input" value={profileForm.rmPrefix} onChange={e => setProfileForm({...profileForm, rmPrefix: e.target.value})} placeholder="Contoh: RM-" />
+                <p style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>Setiap kali Anda menekan Tambah Pasien Baru, sistem akan otomatis melanjutkan nomor dari awalan ini.</p>
+              </div>
+
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="submit" className="neumorphic-button primary" disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'security' && (
+            <form onSubmit={handleSavePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ marginBottom: '8px' }}>Ubah Password</h3>
+              <div>
+                <label className="form-label">Password Lama</label>
+                <input required type="password" className="neumorphic-input" value={passwordForm.oldPassword} onChange={e => setPasswordForm({...passwordForm, oldPassword: e.target.value})} />
+              </div>
+              <div>
+                <label className="form-label">Password Baru</label>
+                <input required type="password" className="neumorphic-input" value={passwordForm.newPassword} onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})} />
+              </div>
+
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="submit" className="neumorphic-button primary" disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Ubah Password'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
