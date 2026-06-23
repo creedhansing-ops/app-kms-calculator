@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from '../utils/db.js';
 import { verifyAuth } from '../utils/auth.js';
-
-
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const whoGrowth = require('who-growth');
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);
   if (!user) return;
@@ -25,11 +26,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Record not found' });
       }
 
-      // Simplified Z-Score logic to prevent Vercel Serverless crash
-      const calcWFA = zScoreWFA || 0.5;
-      const calcHFA = zScoreHFA || 0.2;
-      const calcWFH = zScoreWFH || 0.1;
-      const calcBMI = zScoreBMI || 0.3;
+      // Real WHO Z-Score calculation
+      let calcWFA = zScoreWFA || 0;
+      let calcHFA = zScoreHFA || 0;
+      let calcWFH = zScoreWFH || 0;
+      let calcBMI = zScoreBMI || 0;
+
+      try {
+        const { Calculator, Patient } = whoGrowth as any;
+        const calc = new Calculator();
+        // Convert to months
+        const diffTime = Math.abs(new Date(existingRecord.date).getTime() - new Date(existingRecord.patient.dateOfBirth).getTime());
+        const ageInMonths = Math.floor(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) / 30.44);
+        
+        const child = new Patient(existingRecord.patient.gender === 'L' ? 1 : 2, ageInMonths);
+        calcWFA = calc.weightForAge(child, parseFloat(weight));
+        calcHFA = calc.lengthForAge(child, parseFloat(height));
+        calcWFH = calc.weightForLength(child, parseFloat(weight), parseFloat(height));
+        calcBMI = calc.bmiForAge(child, parseFloat(weight) / ((parseFloat(height)/100)*(parseFloat(height)/100)));
+      } catch (e) {
+        console.error('who-growth calculation failed:', e);
+      }
 
       const updated = await prisma.anthropometryRecord.update({
         where: { id: id as string },

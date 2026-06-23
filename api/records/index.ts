@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from '../utils/db.js';
 import { verifyAuth } from '../utils/auth.js';
-
-
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const whoGrowth = require('who-growth');
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);
   if (!user) return;
@@ -28,13 +29,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Patient not found' });
       }
 
-      // Simplified Z-Score logic to prevent Vercel Serverless crash
-      // The `who-growth` NPM package uses dynamic file reading (fs.readdirSync)
-      // which is fundamentally incompatible with Vercel Serverless Functions.
-      const calcWFA = 0.5;
-      const calcHFA = 0.2;
-      const calcWFH = 0.1;
-      const calcBMI = 0.3;
+      // Real WHO Z-Score calculation
+      let calcWFA = 0;
+      let calcHFA = 0;
+      let calcWFH = 0;
+      let calcBMI = 0;
+
+      try {
+        const { Calculator, Patient } = whoGrowth as any;
+        const calc = new Calculator();
+        // Convert to months
+        const recordDate = req.body.date ? new Date(req.body.date) : new Date();
+        const diffTime = Math.abs(recordDate.getTime() - new Date(patient.dateOfBirth).getTime());
+        const ageInMonths = Math.floor(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) / 30.44);
+        
+        const child = new Patient(patient.gender === 'L' ? 1 : 2, ageInMonths);
+        calcWFA = calc.weightForAge(child, parseFloat(weight));
+        calcHFA = calc.lengthForAge(child, parseFloat(height));
+        calcWFH = calc.weightForLength(child, parseFloat(weight), parseFloat(height));
+        calcBMI = calc.bmiForAge(child, parseFloat(weight) / ((parseFloat(height)/100)*(parseFloat(height)/100)));
+      } catch (e) {
+        console.error('who-growth calculation failed:', e);
+      }
 
       const record = await prisma.anthropometryRecord.create({
         data: {
