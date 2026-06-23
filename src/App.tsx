@@ -102,8 +102,29 @@ export default function App() {
   );
 }
 
-// Temporary inline components for rapid prototyping
 function Dashboard() {
+  const [stats, setStats] = useState({ totalPatients: 0, visitsToday: 0, interventionCount: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('kms_token');
+        const res = await fetch('/api/dashboard', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setStats(await res.json());
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div>
       <div className="dashboard-header">
@@ -111,38 +132,41 @@ function Dashboard() {
         <p>Ringkasan pemantauan pertumbuhan anak wilayah Anda.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '32px' }}>
-        <div className="neumorphic-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ color: 'var(--color-primary)' }}>
-              <Users size={24} />
+      {loading ? (
+        <div style={{ padding: '24px', opacity: 0.7 }}>Memuat data statistik...</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '32px' }}>
+          <div className="neumorphic-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ color: 'var(--color-primary)' }}>
+                <Users size={24} />
+              </div>
             </div>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-accent)' }}>+12 Bulan Ini</span>
+            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{stats.totalPatients}</h2>
+            <p style={{ fontSize: '14px', opacity: 0.8 }}>Total Pasien Terdaftar</p>
           </div>
-          <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>1,248</h2>
-          <p style={{ fontSize: '14px', opacity: 0.8 }}>Total Pasien Terdaftar</p>
-        </div>
 
-        <div className="neumorphic-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ color: 'var(--color-destructive)' }}>
-              <Activity size={24} />
+          <div className="neumorphic-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ color: 'var(--color-destructive)' }}>
+                <Activity size={24} />
+              </div>
             </div>
+            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{stats.interventionCount}</h2>
+            <p style={{ fontSize: '14px', opacity: 0.8 }}>Perlu Intervensi Medis</p>
           </div>
-          <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>14</h2>
-          <p style={{ fontSize: '14px', opacity: 0.8 }}>Perlu Intervensi (Gizi Buruk)</p>
-        </div>
 
-        <div className="neumorphic-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ color: 'var(--color-primary)' }}>
-              <FileText size={24} />
+          <div className="neumorphic-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ color: 'var(--color-primary)' }}>
+                <FileText size={24} />
+              </div>
             </div>
+            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{stats.visitsToday}</h2>
+            <p style={{ fontSize: '14px', opacity: 0.8 }}>Kunjungan Hari Ini</p>
           </div>
-          <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>42</h2>
-          <p style={{ fontSize: '14px', opacity: 0.8 }}>Kunjungan Hari Ini</p>
         </div>
-      </div>
+      )}
     </div>
   );
 }
