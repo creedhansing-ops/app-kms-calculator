@@ -1,12 +1,12 @@
 export type Gender = 'L' | 'P';
 
 export function calculateZScores(
-  name: string,
-  dob: Date,
-  visitDate: Date,
-  weight: number,
-  height: number,
-  gender: Gender
+  _name: string,
+  _dob: Date,
+  _visitDate: Date,
+  _weight: number,
+  _height: number,
+  _gender: Gender
 ) {
   // Frontend calculation removed to prevent Vite bundling error with XLSX.
   // Real calculation is now done securely on the Vercel Backend Server using who-growth.

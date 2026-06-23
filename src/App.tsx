@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
 import { Activity, Users, Settings, Plus, User, FileText, Search, Download, ChevronLeft } from 'lucide-react';
 import GrowthChart from './components/GrowthChart';
