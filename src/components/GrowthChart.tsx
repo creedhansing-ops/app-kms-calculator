@@ -34,32 +34,16 @@ export default function GrowthChart({ gender, type, records }: DetailedGrowthCha
     return { x: xVal, actualValue: yVal };
   });
 
-  // 3. Merge bands data with child actual records based on X axis
-  // Recharts can plot multiple lines if they share the same data array,
-  // or we can just plot them by merging the childDataPoints into the bandsData.
-  const mergedData = bandsData.map(band => {
-    // Find if there's a child record at this exact X (Age or Height)
-    const recordMatches = childDataPoints.filter(d => Math.abs(d.x - band.x) < 0.1);
-    return {
-      ...band,
-      // If multiple records exist for same age/height, just take the first one for simplicity, 
-      // though typically it's 1 per month
-      actualValue: recordMatches.length > 0 ? recordMatches[0].actualValue : null
-    };
-  });
+  // 3. Merge bands data with child actual records
+  const mergedData: any[] = [...bandsData];
 
-  // If there are records at X values that don't perfectly align with our bands X increments
-  // (e.g. child height is 61.2, but band is 61.0 and 61.5), we can inject them to be precise,
-  // but for Recharts, just having them in the same sorted array works best.
+  // Simply add all child data points as independent objects in the mergedData array.
+  // Recharts handles multiple objects with the same X value perfectly!
   childDataPoints.forEach(cp => {
-    const exists = mergedData.find(d => Math.abs(d.x - cp.x) < 0.05);
-    if (!exists) {
-      mergedData.push({
-        x: cp.x,
-        actualValue: cp.actualValue,
-        // We leave the SD bands null here, Recharts will interpolate the lines
-      });
-    }
+    mergedData.push({
+      x: cp.x,
+      actualValue: cp.actualValue,
+    });
   });
 
   // Sort by X so lines draw left to right
