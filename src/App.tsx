@@ -177,6 +177,20 @@ function PatientList() {
     fetchPatients();
   }, []);
 
+  const getNextRmNumber = () => {
+    let maxNum = 0;
+    patients.forEach(p => {
+      if (p.rmNumber && p.rmNumber.startsWith('RM-')) {
+        const numPart = p.rmNumber.replace('RM-', '');
+        const num = parseInt(numPart, 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
+    return `RM-${String(maxNum + 1).padStart(3, '0')}`;
+  };
+
   return (
     <div>
       <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -192,6 +206,7 @@ function PatientList() {
       
       <NewPatientModal 
         isOpen={isModalOpen} 
+        suggestedRmNumber={getNextRmNumber()}
         onClose={() => setIsModalOpen(false)} 
         onSuccess={() => {
           alert('Data tersimpan!');

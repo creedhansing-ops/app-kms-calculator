@@ -5,12 +5,13 @@ interface NewPatientModalProps {
   onClose: () => void;
   onSuccess: () => void;
   initialData?: any;
+  suggestedRmNumber?: string;
 }
 
-export default function NewPatientModal({ isOpen, onClose, onSuccess, initialData }: NewPatientModalProps) {
+export default function NewPatientModal({ isOpen, onClose, onSuccess, initialData, suggestedRmNumber }: NewPatientModalProps) {
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
-    rmNumber: initialData?.rmNumber || '',
+    rmNumber: initialData?.rmNumber || suggestedRmNumber || '',
     dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split('T')[0] : '',
     gender: initialData?.gender || 'L',
     parentName: initialData?.parentName || '',
@@ -30,9 +31,9 @@ export default function NewPatientModal({ isOpen, onClose, onSuccess, initialDat
         address: initialData.address || ''
       });
     } else {
-      setFormData({ name: '', rmNumber: '', dateOfBirth: '', gender: 'L', parentName: '', address: '' });
+      setFormData({ name: '', rmNumber: suggestedRmNumber || '', dateOfBirth: '', gender: 'L', parentName: '', address: '' });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, suggestedRmNumber]);
 
   if (!isOpen) return null;
 
