@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom';
-import { Activity, Users, Settings, Plus, User, FileText, Search, Download, ChevronLeft, LogOut } from 'lucide-react';
+import { Activity, Users, Settings, Plus, User, FileText, Search, Download, ChevronLeft, ChevronRight, LogOut, Menu, X } from 'lucide-react';
 import GrowthChart from './components/GrowthChart';
 import { exportPatientToPDF } from './utils/pdfExport';
 import NewPatientModal from './components/NewPatientModal';
@@ -17,6 +17,8 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<{name: string, clinic?: string, rmPrefix?: string}>({ name: 'Ahli Gizi', clinic: 'Puskesmas' });
+  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem('kms_user');
@@ -41,45 +43,78 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar Navigation */}
-      <aside className="sidebar">
+      {/* Mobile Header */}
+      <div className="mobile-header">
         <div className="logo">
-          <Activity size={32} color="var(--color-primary)" />
-          KMS Digital
+          <Activity size={24} color="var(--color-primary)" />
+          <span>KMS Digital</span>
+        </div>
+        <button onClick={() => setIsMobileSidebarOpen(true)} className="neumorphic-button" style={{ padding: '8px', display: 'flex', border: '1px solid var(--color-border)', backgroundColor: 'transparent' }}>
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* Mobile Overlay */}
+      <div 
+        className={`mobile-overlay ${isMobileSidebarOpen ? 'open' : ''}`}
+        onClick={() => setIsMobileSidebarOpen(false)}
+      />
+
+      {/* Sidebar Navigation */}
+      <aside className={`sidebar ${isSidebarMinimized ? 'minimized' : ''} ${isMobileSidebarOpen ? 'mobile-open' : ''}`}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="logo">
+            <Activity size={32} color="var(--color-primary)" />
+            <span>KMS Digital</span>
+          </div>
+          {isMobileSidebarOpen && (
+             <button onClick={() => setIsMobileSidebarOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--color-foreground)', cursor: 'pointer' }}>
+               <X size={24} />
+             </button>
+          )}
         </div>
         
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '32px' }}>
-          <Link to="/" className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}>
+          <Link to="/" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}>
             <Activity size={20} />
-            Dashboard
+            <span className="nav-text">Dashboard</span>
           </Link>
-          <Link to="/patients" className={`nav-item ${location.pathname.startsWith('/patients') ? 'active' : ''}`}>
+          <Link to="/patients" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname.startsWith('/patients') ? 'active' : ''}`}>
             <Users size={20} />
-            Data Pasien
+            <span className="nav-text">Data Pasien</span>
           </Link>
-          <Link to="/settings" className={`nav-item ${location.pathname === '/settings' ? 'active' : ''}`}>
+          <Link to="/settings" onClick={() => setIsMobileSidebarOpen(false)} className={`nav-item ${location.pathname === '/settings' ? 'active' : ''}`}>
             <Settings size={20} />
-            Pengaturan
+            <span className="nav-text">Pengaturan</span>
           </Link>
         </nav>
 
-        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+        <div className="user-info" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
             <User size={20} />
           </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '14px' }}>{userProfile.name}</div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>{userProfile.clinic || 'Klinik / Puskesmas'}</div>
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ fontWeight: 600, fontSize: '14px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{userProfile.name}</div>
+            <div style={{ fontSize: '12px', opacity: 0.7, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{userProfile.clinic || 'Klinik / Puskesmas'}</div>
           </div>
         </div>
         
-        <div style={{ padding: '24px 16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ padding: '24px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button 
             onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#0d9488', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px', width: '100%' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#0d9488', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px', width: '100%', justifyContent: isSidebarMinimized ? 'center' : 'flex-start' }}
           >
             <LogOut size={20} />
-            Keluar
+            <span className="logout-text">Keluar</span>
+          </button>
+
+          {/* Desktop Minimize Toggle */}
+          <button 
+            onClick={() => setIsSidebarMinimized(!isSidebarMinimized)}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--color-foreground)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px', width: '100%', justifyContent: isSidebarMinimized ? 'center' : 'flex-start', opacity: 0.5 }}
+          >
+            {isSidebarMinimized ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+            <span className="logout-text">Minimize</span>
           </button>
         </div>
       </aside>
