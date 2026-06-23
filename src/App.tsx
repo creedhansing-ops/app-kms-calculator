@@ -359,6 +359,10 @@ function PatientDetail() {
   const [selectedRecordToEdit, setSelectedRecordToEdit] = useState<any>(null);
   const { data: patient, error } = useSWR(id ? `/api/patients/${id}` : null, fetcher);
 
+  if (error) {
+    return <div style={{ padding: '48px', color: 'red' }}>Terjadi kesalahan saat memuat data pasien.</div>;
+  }
+
   const handleDeleteRecord = async (recordId: string) => {
     if (!window.confirm('Yakin ingin menghapus riwayat kunjungan ini?')) return;
     
