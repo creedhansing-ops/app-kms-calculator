@@ -1,6 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Activity, Users, Settings, Plus, User, FileText, Search, Download, ChevronLeft, ChevronRight, LogOut, Menu, X } from 'lucide-react';
+import useSWR, { mutate } from 'swr';
+
+const fetcher = async (url: string) => {
+  const token = localStorage.getItem('kms_token');
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) {
+    throw new Error('An error occurred while fetching the data.');
+  }
+  return res.json();
+};
+
 import GrowthChart from './components/GrowthChart';
 import { exportPatientToPDF } from './utils/pdfExport';
 import NewPatientModal from './components/NewPatientModal';
@@ -139,27 +156,10 @@ export default function App() {
 }
 
 function Dashboard() {
-  const [stats, setStats] = useState({ totalPatients: 0, visitsToday: 0, interventionCount: 0 });
-  const [loading, setLoading] = useState(true);
+  const { data: stats, error } = useSWR('/api/dashboard', fetcher);
+  const loading = !stats && !error;
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const token = localStorage.getItem('kms_token');
-        const res = await fetch('/api/dashboard', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          setStats(await res.json());
-        }
-      } catch (err) {
-        console.error('Failed to fetch dashboard stats', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
+  const displayStats = stats || { totalPatients: 0, visitsToday: 0, interventionCount: 0 };
 
   return (
     <div>
@@ -178,7 +178,7 @@ function Dashboard() {
                 <Users size={24} />
               </div>
             </div>
-            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{stats.totalPatients}</h2>
+            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{displayStats.totalPatients}</h2>
             <p style={{ fontSize: '14px', opacity: 0.8 }}>Total Pasien Terdaftar</p>
           </div>
 
@@ -188,7 +188,7 @@ function Dashboard() {
                 <Activity size={24} />
               </div>
             </div>
-            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{stats.interventionCount}</h2>
+            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{displayStats.interventionCount}</h2>
             <p style={{ fontSize: '14px', opacity: 0.8 }}>Perlu Intervensi Medis</p>
           </div>
 
@@ -198,7 +198,7 @@ function Dashboard() {
                 <FileText size={24} />
               </div>
             </div>
-            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{stats.visitsToday}</h2>
+            <h2 style={{ fontSize: '36px', marginTop: '16px', marginBottom: '4px' }}>{displayStats.visitsToday}</h2>
             <p style={{ fontSize: '14px', opacity: 0.8 }}>Kunjungan Hari Ini</p>
           </div>
         </div>
@@ -209,49 +209,33 @@ function Dashboard() {
 
 function PatientList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchPatients = async () => {
-    try {
-      const token = localStorage.getItem('kms_token');
-      const res = await fetch('/api/patients', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.status === 401) {
-        window.location.href = '/login';
-        return;
-      }
-      const data = await res.json();
-      setPatients(data);
-    } catch (err) {
-      console.error('Failed to fetch patients', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: patients, error } = useSWR('/api/patients', fetcher);
+  const loading = !patients && !error;
+  const displayPatients = patients || [];
 
   const handleDeletePatient = async (id: string, name: string) => {
     if (!window.confirm(`Yakin ingin menghapus pasien ${name} beserta seluruh riwayat kunjungannya?`)) return;
+    
+    // Optimistic UI Delete
+    mutate('/api/patients', displayPatients.filter((p: any) => p.id !== id), false);
     try {
       const token = localStorage.getItem('kms_token');
       const res = await fetch(`/api/patients/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) fetchPatients();
-      else alert('Gagal menghapus data.');
+      if (res.ok) {
+        mutate('/api/patients');
+      } else {
+        alert('Gagal menghapus data.');
+        mutate('/api/patients'); // revert
+      }
     } catch (err) {
       console.error(err);
       alert('Terjadi kesalahan jaringan.');
+      mutate('/api/patients'); // revert
     }
   };
-
-  useEffect(() => {
-    fetchPatients();
-  }, []);
 
   const getNextRmNumber = () => {
     const userStr = localStorage.getItem('kms_user');
@@ -264,7 +248,7 @@ function PatientList() {
     }
 
     let maxNum = 0;
-    patients.forEach(p => {
+    displayPatients.forEach((p: any) => {
       if (p.rmNumber && p.rmNumber.startsWith(prefix)) {
         const numPart = p.rmNumber.replace(prefix, '');
         const num = parseInt(numPart, 10);
@@ -295,7 +279,7 @@ function PatientList() {
         onClose={() => setIsModalOpen(false)} 
         onSuccess={() => {
           alert('Data tersimpan!');
-          fetchPatients();
+          mutate('/api/patients');
         }} 
       />
 
@@ -326,10 +310,10 @@ function PatientList() {
           <tbody>
             {loading ? (
               <tr><td colSpan={6} style={{ textAlign: 'center' }}>Memuat data...</td></tr>
-            ) : patients.length === 0 ? (
+            ) : displayPatients.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center' }}>Belum ada data pasien.</td></tr>
             ) : (
-              patients.map(p => {
+              displayPatients.map((p: any) => {
                 const age = getAgeInMonths(new Date(p.dateOfBirth));
                 const latestRecord = p.records?.[0];
                 const status = latestRecord && latestRecord.zScoreWFA != null ? evaluateWFA(latestRecord.zScoreWFA) : 'Belum Ada Data';
@@ -373,43 +357,37 @@ function PatientDetail() {
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [isEditPatientOpen, setIsEditPatientOpen] = useState(false);
   const [selectedRecordToEdit, setSelectedRecordToEdit] = useState<any>(null);
-  const [patient, setPatient] = useState<any>(null);
-  
-  const fetchPatient = async () => {
-    try {
-      const token = localStorage.getItem('kms_token');
-      const res = await fetch(`/api/patients/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        setPatient(await res.json());
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const { data: patient, error } = useSWR(id ? `/api/patients/${id}` : null, fetcher);
 
   const handleDeleteRecord = async (recordId: string) => {
     if (!window.confirm('Yakin ingin menghapus riwayat kunjungan ini?')) return;
+    
+    if (patient) {
+      const updatedPatient = {
+        ...patient,
+        records: patient.records.filter((r: any) => r.id !== recordId)
+      };
+      mutate(`/api/patients/${id}`, updatedPatient, false);
+    }
+
     try {
       const token = localStorage.getItem('kms_token');
       const res = await fetch(`/api/records/${recordId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) fetchPatient();
-      else alert('Gagal menghapus kunjungan.');
+      if (res.ok) {
+        mutate(`/api/patients/${id}`);
+      } else {
+        alert('Gagal menghapus kunjungan.');
+        mutate(`/api/patients/${id}`); // revert
+      }
     } catch (err) {
       console.error(err);
       alert('Terjadi kesalahan jaringan.');
+      mutate(`/api/patients/${id}`); // revert
     }
   };
-
-  useEffect(() => {
-    if (id) fetchPatient();
-  }, [id]);
 
   if (!patient) return <div style={{ padding: '48px' }}>Memuat data pasien...</div>;
 
@@ -586,7 +564,8 @@ function PatientDetail() {
         onClose={() => setIsEditPatientOpen(false)}
         onSuccess={() => {
           alert('Profil diperbarui!');
-          fetchPatient();
+          mutate(`/api/patients/${id}`);
+          mutate('/api/patients'); // Also update list
         }}
       />
       
@@ -600,7 +579,7 @@ function PatientDetail() {
         }}
         onSuccess={() => {
           alert(selectedRecordToEdit ? 'Kunjungan diperbarui!' : 'Kunjungan tersimpan!');
-          fetchPatient();
+          mutate(`/api/patients/${id}`);
         }}
       />
     </div>
