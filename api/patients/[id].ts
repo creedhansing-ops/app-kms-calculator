@@ -56,6 +56,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  res.setHeader('Allow', ['GET', 'PUT']);
+  if (req.method === 'DELETE') {
+    try {
+      const existing = await prisma.patient.findFirst({
+        where: { id: id as string, nutritionistId: user.id }
+      });
+
+      if (!existing) return res.status(404).json({ error: 'Patient not found' });
+
+      // Automatically cascades records if schema supports it, but just in case:
+      await prisma.anthropometryRecord.deleteMany({
+        where: { patientId: id as string }
+      });
+
+      await prisma.patient.delete({
+        where: { id: id as string }
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to delete patient' });
+    }
+  }
+
+  res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
   res.status(405).end(`Method ${req.method} Not Allowed`);
 }

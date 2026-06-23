@@ -10,6 +10,7 @@ interface NewVisitModalProps {
 
 export default function NewVisitModal({ isOpen, patientId, onClose, onSuccess, initialData }: NewVisitModalProps) {
   const [formData, setFormData] = useState({
+    date: initialData?.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     weight: initialData?.weight || '',
     height: initialData?.height || '',
     headCircum: initialData?.headCircum || '',
@@ -21,6 +22,7 @@ export default function NewVisitModal({ isOpen, patientId, onClose, onSuccess, i
   React.useEffect(() => {
     if (initialData) {
       setFormData({
+        date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         weight: initialData.weight || '',
         height: initialData.height || '',
         headCircum: initialData.headCircum || '',
@@ -28,7 +30,7 @@ export default function NewVisitModal({ isOpen, patientId, onClose, onSuccess, i
         consultationNotes: initialData.consultationNotes || ''
       });
     } else {
-      setFormData({ weight: '', height: '', headCircum: '', lila: '', consultationNotes: '' });
+      setFormData({ date: new Date().toISOString().split('T')[0], weight: '', height: '', headCircum: '', lila: '', consultationNotes: '' });
     }
   }, [initialData, isOpen]);
 
@@ -51,6 +53,7 @@ export default function NewVisitModal({ isOpen, patientId, onClose, onSuccess, i
         },
         body: JSON.stringify({
           patientId,
+          date: isEdit ? new Date(formData.date).toISOString() : undefined,
           weight: parseFloat(formData.weight),
           height: parseFloat(formData.height),
           headCircum: formData.headCircum ? parseFloat(formData.headCircum) : undefined,
@@ -85,6 +88,12 @@ export default function NewVisitModal({ isOpen, patientId, onClose, onSuccess, i
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {initialData && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Tanggal Kunjungan</label>
+                <input type="date" className="neumorphic-input" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+              </div>
+            )}
             <div>
               <label className="form-label">Berat Badan (kg)</label>
               <input required type="number" step="0.1" className="neumorphic-input" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} placeholder="Contoh: 8.5" />

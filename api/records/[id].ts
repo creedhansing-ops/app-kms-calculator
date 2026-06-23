@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'PUT') {
     try {
       const {
-        weight, height, headCircum, lila, consultationNotes,
+        date, weight, height, headCircum, lila, consultationNotes,
         zScoreWFA, zScoreHFA, zScoreWFH, zScoreBMI
       } = req.body;
       
@@ -31,7 +31,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let calcBMI = zScoreBMI || 0;
 
       try {
-        const diffTime = Math.abs(new Date(existingRecord.date).getTime() - new Date(existingRecord.patient.dateOfBirth).getTime());
+        const recordDate = date ? new Date(date) : new Date(existingRecord.date);
+        const diffTime = Math.abs(recordDate.getTime() - new Date(existingRecord.patient.dateOfBirth).getTime());
         const ageInMonths = Math.floor(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) / 30.44);
         
         const zScores = (await import('../utils/zscore-calculator.js')).calculateAllZScores(
@@ -51,6 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const updated = await prisma.anthropometryRecord.update({
         where: { id: id as string },
         data: {
+          date: date ? new Date(date) : undefined,
           weight: parseFloat(weight),
           height: parseFloat(height),
           headCircum: headCircum ? parseFloat(headCircum) : null,
@@ -70,6 +72,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  res.setHeader('Allow', ['PUT']);
+  if (req.method === 'DELETE') {
+    try {
+      const existingRecord = await prisma.anthropometryRecord.findUnique({
+        where: { id: id as string },
+        include: { patient: true }
+      });
+
+      if (!existingRecord || existingRecord.patient.nutritionistId !== user.id) {
+        return res.status(404).json({ error: 'Record not found' });
+      }
+
+      await prisma.anthropometryRecord.delete({
+        where: { id: id as string }
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to delete record' });
+    }
+  }
+
+  res.setHeader('Allow', ['PUT', 'DELETE']);
   res.status(405).end(`Method ${req.method} Not Allowed`);
 }

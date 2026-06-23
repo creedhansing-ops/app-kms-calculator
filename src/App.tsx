@@ -196,6 +196,22 @@ function PatientList() {
     }
   };
 
+  const handleDeletePatient = async (id: string, name: string) => {
+    if (!window.confirm(`Yakin ingin menghapus pasien ${name} beserta seluruh riwayat kunjungannya?`)) return;
+    try {
+      const token = localStorage.getItem('kms_token');
+      const res = await fetch(`/api/patients/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchPatients();
+      else alert('Gagal menghapus data.');
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kesalahan jaringan.');
+    }
+  };
+
   useEffect(() => {
     fetchPatients();
   }, []);
@@ -296,10 +312,13 @@ function PatientList() {
                         {status}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ display: 'flex', gap: '8px' }}>
                       <Link to={`/patients/${p.id}`} className="neumorphic-button" style={{ padding: '6px 12px', fontSize: '14px', textDecoration: 'none' }}>
                         Detail
                       </Link>
+                      <button onClick={() => handleDeletePatient(p.id, p.name)} className="neumorphic-button" style={{ padding: '6px 12px', fontSize: '14px', color: 'var(--color-destructive)' }}>
+                        Hapus
+                      </button>
                     </td>
                   </tr>
                 );
@@ -332,6 +351,22 @@ function PatientDetail() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteRecord = async (recordId: string) => {
+    if (!window.confirm('Yakin ingin menghapus riwayat kunjungan ini?')) return;
+    try {
+      const token = localStorage.getItem('kms_token');
+      const res = await fetch(`/api/records/${recordId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchPatient();
+      else alert('Gagal menghapus kunjungan.');
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kesalahan jaringan.');
     }
   };
 
@@ -487,12 +522,15 @@ function PatientDetail() {
                         <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {r.consultationNotes || '-'}
                         </td>
-                        <td>
+                        <td style={{ display: 'flex', gap: '8px' }}>
                           <button onClick={() => {
                             setSelectedRecordToEdit(r);
                             setIsVisitModalOpen(true);
                           }} className="neumorphic-button" style={{ padding: '4px 8px', fontSize: '12px' }}>
                             Edit
+                          </button>
+                          <button onClick={() => handleDeleteRecord(r.id)} className="neumorphic-button" style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--color-destructive)' }}>
+                            Hapus
                           </button>
                         </td>
                       </tr>
