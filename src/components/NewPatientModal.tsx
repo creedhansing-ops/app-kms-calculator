@@ -44,9 +44,13 @@ export default function NewPatientModal({ isOpen, onClose, onSuccess, initialDat
       const isEdit = !!initialData;
       const url = isEdit ? `/api/patients/${initialData.id}` : '/api/patients';
       
+      const token = localStorage.getItem('kms_token');
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData)
       });
       

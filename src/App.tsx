@@ -1,14 +1,37 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
-import { Activity, Users, Settings, Plus, User, FileText, Search, Download, ChevronLeft } from 'lucide-react';
+import { Routes, Route, Link, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom';
+import { Activity, Users, Settings, Plus, User, FileText, Search, Download, ChevronLeft, LogOut } from 'lucide-react';
 import GrowthChart from './components/GrowthChart';
 import { exportPatientToPDF } from './utils/pdfExport';
 import NewPatientModal from './components/NewPatientModal';
 import NewVisitModal from './components/NewVisitModal';
+import Login from './pages/Login';
 import { getAgeInMonths, formatAge, evaluateWFA } from './utils/zscore';
+
+// Protected Route Wrapper
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = localStorage.getItem('kms_token');
+  if (!token) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
 
 export default function App() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('kms_token');
+    localStorage.removeItem('kms_user');
+    navigate('/login');
+  };
+
+  if (location.pathname === '/login') {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -43,14 +66,36 @@ export default function App() {
             <div style={{ fontSize: '12px', opacity: 0.7 }}>Puskesmas Pusat</div>
           </div>
         </div>
+        
+        <div style={{ padding: '24px 16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <button 
+            onClick={handleLogout}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#0d9488', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px', width: '100%' }}
+          >
+            <LogOut size={20} />
+            Keluar
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/patients" element={<PatientList />} />
-          <Route path="/patients/:id" element={<PatientDetail />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients" element={<ProtectedRoute><PatientList /></ProtectedRoute>} />
+          <Route path="/patients/:id" element={<ProtectedRoute><PatientDetail /></ProtectedRoute>} />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <div className="neumorphic-card">
+                <h2 style={{ marginBottom: '16px' }}>Pengaturan</h2>
+                <p style={{ color: '#64748b' }}>Konfigurasi sistem akan segera hadir.</p>
+              </div>
+            </ProtectedRoute>
+          } />
         </Routes>
       </main>
     </div>
@@ -109,11 +154,20 @@ function PatientList() {
 
   const fetchPatients = async () => {
     try {
-      const res = await fetch('/api/patients');
+      const token = localStorage.getItem('kms_token');
+      const res = await fetch('/api/patients', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
       const data = await res.json();
       setPatients(data);
     } catch (err) {
-      console.error('Failed to load patients', err);
+      console.error('Failed to fetch patients', err);
     } finally {
       setLoading(false);
     }
@@ -220,7 +274,12 @@ function PatientDetail() {
   
   const fetchPatient = async () => {
     try {
-      const res = await fetch(`/api/patients/${id}`);
+      const token = localStorage.getItem('kms_token');
+      const res = await fetch(`/api/patients/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         setPatient(await res.json());
       }

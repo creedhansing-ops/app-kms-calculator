@@ -42,9 +42,13 @@ export default function NewVisitModal({ isOpen, patientId, onClose, onSuccess, i
       const isEdit = !!initialData;
       const url = isEdit ? `/api/records/${initialData.id}` : '/api/records';
       
+      const token = localStorage.getItem('kms_token');
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           patientId,
           weight: parseFloat(formData.weight),

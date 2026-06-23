@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from '../utils/db';
 import { verifyAuth } from '../utils/auth';
+import whoGrowth from 'who-growth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);
@@ -27,12 +28,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Patient not found' });
       }
 
-      // Note: who-growth library was removed due to esbuild/Vite incompatibility with xlsx.
-      // Using simple fallbacks or keeping them null for now.
-      let calcWFA = zScoreWFA || 0;
-      let calcHFA = zScoreHFA || 0;
-      let calcWFH = zScoreWFH || 0;
-      let calcBMI = zScoreBMI || 0;
+      // Real WHO Z-Score calculation
+      let calcWFA = 0;
+      let calcHFA = 0;
+      let calcWFH = 0;
+      let calcBMI = 0;
+
+      try {
+        const { Calculator, Patient } = whoGrowth as any;
+        const calc = new Calculator();
+        // Convert to months
+        const recordDate = req.body.date ? new Date(req.body.date) : new Date();
+        const diffTime = Math.abs(recordDate.getTime() - new Date(patient.dateOfBirth).getTime());
+        const ageInMonths = Math.floor(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) / 30.44);
+        
+        const child = new Patient(patient.gender === 'L' ? 1 : 2, ageInMonths);
+        calcWFA = calc.weightForAge(child, parseFloat(weight));
+        calcHFA = calc.lengthForAge(child, parseFloat(height));
+        calcWFH = calc.weightForLength(child, parseFloat(weight), parseFloat(height));
+        calcBMI = calc.bmiForAge(child, parseFloat(weight) / ((parseFloat(height)/100)*(parseFloat(height)/100)));
+      } catch (e) {
+        console.error('who-growth calculation failed:', e);
+      }
 
       const record = await prisma.anthropometryRecord.create({
         data: {
