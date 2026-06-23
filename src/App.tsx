@@ -6,9 +6,7 @@ import { exportPatientToPDF } from './utils/pdfExport';
 import NewPatientModal from './components/NewPatientModal';
 import NewVisitModal from './components/NewVisitModal';
 import Login from './pages/Login';
-import { getAgeInMonths, formatAge, evaluateWFA } from './utils/zscore';
-
-// Protected Route Wrapper
+import { getAgeInMonths, formatAge, evaluateWFA, evaluateHFA, evaluateWFH, evaluateBMI } from './utils/zscore';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('kms_token');
   if (!token) return <Navigate to="/login" replace />;
@@ -401,18 +399,66 @@ function PatientDetail() {
           </div>
         </div>
 
-        <div className="neumorphic-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+        <div className="neumorphic-card" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div>
-            <h3 style={{ marginBottom: '16px' }}>Grafik Pertumbuhan KMS (BB/U)</h3>
+            <h3 style={{ marginBottom: '8px' }}>a). Berat Badan / Umur (BB/U)</h3>
+            {patient.records && patient.records.length > 0 && patient.records[0].zScoreWFA != null ? (
+              <p style={{ marginBottom: '16px', fontWeight: 500, fontSize: '14px' }}>
+                Nilai Z Score : {(patient.records[0].zScoreWFA).toFixed(2)} <span style={{ color: patient.records[0].zScoreWFA >= -2 && patient.records[0].zScoreWFA <= 1 ? 'var(--color-primary)' : 'var(--color-destructive)' }}>({evaluateWFA(patient.records[0].zScoreWFA)})</span>
+              </p>
+            ) : null}
             {growthData.length > 0 ? (
-              <GrowthChart data={growthData} type="BB/U" />
+              <GrowthChart type="WFA" gender={patient.gender} records={growthData} />
             ) : (
-              <div style={{ padding: '48px', textAlign: 'center', opacity: 0.6 }}>Belum ada data kunjungan. Silakan tambah kunjungan pertama.</div>
+              <div style={{ padding: '24px', textAlign: 'center', opacity: 0.6 }}>Belum ada data kunjungan.</div>
+            )}
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '24px' }}>
+            <h3 style={{ marginBottom: '8px' }}>b). Tinggi Badan / Umur (TB/U)</h3>
+            {patient.records && patient.records.length > 0 && patient.records[0].zScoreHFA != null ? (
+              <p style={{ marginBottom: '16px', fontWeight: 500, fontSize: '14px' }}>
+                Nilai Z Score : {(patient.records[0].zScoreHFA).toFixed(2)} <span style={{ color: patient.records[0].zScoreHFA >= -2 && patient.records[0].zScoreHFA <= 3 ? 'var(--color-primary)' : 'var(--color-destructive)' }}>({evaluateHFA(patient.records[0].zScoreHFA)})</span>
+              </p>
+            ) : null}
+            {growthData.length > 0 ? (
+              <GrowthChart type="HFA" gender={patient.gender} records={growthData} />
+            ) : (
+              <div style={{ padding: '24px', textAlign: 'center', opacity: 0.6 }}>Belum ada data kunjungan.</div>
+            )}
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '24px' }}>
+            <h3 style={{ marginBottom: '8px' }}>c). Berat Badan / Tinggi Badan (BB/TB)</h3>
+            {patient.records && patient.records.length > 0 && patient.records[0].zScoreWFH != null ? (
+              <p style={{ marginBottom: '16px', fontWeight: 500, fontSize: '14px' }}>
+                Nilai Z Score : {(patient.records[0].zScoreWFH).toFixed(2)} <span style={{ color: patient.records[0].zScoreWFH >= -2 && patient.records[0].zScoreWFH <= 1 ? 'var(--color-primary)' : 'var(--color-destructive)' }}>({evaluateWFH(patient.records[0].zScoreWFH)})</span>
+              </p>
+            ) : null}
+            {growthData.length > 0 ? (
+              <GrowthChart type="WFH" gender={patient.gender} records={growthData} />
+            ) : (
+              <div style={{ padding: '24px', textAlign: 'center', opacity: 0.6 }}>Belum ada data kunjungan.</div>
+            )}
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '24px' }}>
+            <h3 style={{ marginBottom: '8px' }}>d). Indeks Masa Tubuh / Umur (IMT/U)</h3>
+            {patient.records && patient.records.length > 0 && patient.records[0].zScoreBMI != null ? (
+              <p style={{ marginBottom: '16px', fontWeight: 500, fontSize: '14px' }}>
+                Nilai Z Score : {(patient.records[0].zScoreBMI).toFixed(2)} <span style={{ color: patient.records[0].zScoreBMI >= -2 && patient.records[0].zScoreBMI <= 1 ? 'var(--color-primary)' : 'var(--color-destructive)' }}>({evaluateBMI(patient.records[0].zScoreBMI)})</span>
+              </p>
+            ) : null}
+            {growthData.length > 0 ? (
+              <GrowthChart type="BMI" gender={patient.gender} records={growthData} />
+            ) : (
+              <div style={{ padding: '24px', textAlign: 'center', opacity: 0.6 }}>Belum ada data kunjungan.</div>
             )}
           </div>
           
           {patient.records && patient.records.length > 0 && (
-            <div>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '24px' }}>
               <h3 style={{ marginBottom: '16px' }}>Riwayat Kunjungan</h3>
               <div className="data-table-container">
                 <table className="data-table">
