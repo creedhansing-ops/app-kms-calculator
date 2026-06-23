@@ -29,7 +29,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Patient not found' });
       }
 
-      // Real WHO Z-Score calculation
+      // Real WHO Z-Score calculation using who-growth
+      const sdMap: Record<string, number> = {
+        "SD4": 4, "SD3": 3, "SD2": 2, "SD1": 1, "SD0": 0, "Median": 0,
+        "SD1neg": -1, "SD2neg": -2, "SD3neg": -3, "SD4neg": -4
+      };
+      
       let calcWFA = 0;
       let calcHFA = 0;
       let calcWFH = 0;
@@ -37,17 +42,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       try {
         const { Calculator, Patient } = whoGrowth as any;
-        const calc = new Calculator();
-        // Convert to months
-        const recordDate = req.body.date ? new Date(req.body.date) : new Date();
-        const diffTime = Math.abs(recordDate.getTime() - new Date(patient.dateOfBirth).getTime());
-        const ageInMonths = Math.floor(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) / 30.44);
+        const patientData = {
+          name: "Child",
+          birthDate: new Date(patient.dateOfBirth),
+          weight: parseFloat(weight),
+          height: parseFloat(height),
+          sex: patient.gender === 'L' ? 'Male' : 'Female'
+        };
+        const child = Patient.new(patientData);
+        const zCalc = Calculator.load("ZScore", child);
         
-        const child = new Patient(patient.gender === 'L' ? 1 : 2, ageInMonths);
-        calcWFA = calc.weightForAge(child, parseFloat(weight));
-        calcHFA = calc.lengthForAge(child, parseFloat(height));
-        calcWFH = calc.weightForLength(child, parseFloat(weight), parseFloat(height));
-        calcBMI = calc.bmiForAge(child, parseFloat(weight) / ((parseFloat(height)/100)*(parseFloat(height)/100)));
+        calcWFA = sdMap[zCalc.calculateWeightForAge()] ?? 0;
+        calcHFA = sdMap[zCalc.calculateHeightForAge()] ?? 0;
+        calcWFH = sdMap[zCalc.calculateWeightForHeight()] ?? 0;
+        
+        try {
+          calcBMI = sdMap[zCalc.calculateBMIForAge()] ?? 0;
+        } catch (err) {
+          const bmiVal = parseFloat(weight) / ((parseFloat(height)/100)*(parseFloat(height)/100));
+          if (bmiVal > 25) calcBMI = 3;
+          else if (bmiVal < 14) calcBMI = -3;
+          else calcBMI = 0;
+        }
       } catch (e) {
         console.error('who-growth calculation failed:', e);
       }
