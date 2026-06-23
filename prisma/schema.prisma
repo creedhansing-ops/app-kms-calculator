@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Nutritionist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  clinic    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  patients  Patient[]
+}
+
+model Patient {
+  id              String   @id @default(cuid())
+  rmNumber        String?  @unique
+  name            String
+  dateOfBirth     DateTime
+  gender          String   // "L" or "P"
+  parentName      String
+  address         String
+  nutritionistId  String
+  nutritionist    Nutritionist @relation(fields: [nutritionistId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  records         AnthropometryRecord[]
+}
+
+model AnthropometryRecord {
+  id              String   @id @default(cuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  date            DateTime @default(now())
+  
+  // Measurements
+  weight          Float    // kg
+  height          Float    // cm
+  headCircum      Float?   // cm
+  lila            Float?   // cm
+  
+  // Z-Scores calculated
+  zScoreWFA       Float?   // Weight for Age
+  zScoreHFA       Float?   // Height for Age
+  zScoreWFH       Float?   // Weight for Height
+  zScoreBMI       Float?   // BMI for Age
+  
+  // Interventions
+  consultationNotes String?
+  diagnosis       String?
+  intervention    String?
+  target          String?
+  nextVisit       DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
