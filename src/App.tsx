@@ -381,6 +381,12 @@ function PatientDetail() {
               <div>{new Date(patient.dateOfBirth).toLocaleDateString('id-ID')}</div>
             </div>
             <div>
+              <div className="form-label">Usia Saat Ini</div>
+              <div style={{ fontWeight: 500, color: 'var(--color-primary)' }}>
+                {formatAge(getAgeInMonths(new Date(patient.dateOfBirth), new Date()))}
+              </div>
+            </div>
+            <div>
               <div className="form-label">Nama Orang Tua</div>
               <div>{patient.parentName}</div>
             </div>
@@ -398,7 +404,6 @@ function PatientDetail() {
             </div>
           </div>
         </div>
-
 
         <div className="neumorphic-card" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div>
@@ -465,6 +470,7 @@ function PatientDetail() {
                   <thead>
                     <tr>
                       <th>Tanggal</th>
+                      <th>Usia Saat Kunjungan</th>
                       <th>BB (kg)</th>
                       <th>TB (cm)</th>
                       <th>Catatan</th>
@@ -475,6 +481,7 @@ function PatientDetail() {
                     {patient.records.map((r: any) => (
                       <tr key={r.id}>
                         <td>{new Date(r.date).toLocaleDateString('id-ID')}</td>
+                        <td>{formatAge(getAgeInMonths(new Date(patient.dateOfBirth), new Date(r.date)))}</td>
                         <td>{r.weight}</td>
                         <td>{r.height}</td>
                         <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
