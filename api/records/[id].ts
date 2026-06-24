@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from '../utils/db.js';
 import { verifyAuth } from '../utils/auth.js';
+import { calculateAllZScores } from '../utils/zscore-calculator.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);
@@ -35,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const diffTime = Math.abs(recordDate.getTime() - new Date(existingRecord.patient.dateOfBirth).getTime());
         const ageInMonths = Math.floor(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) / 30.44);
         
-        const zScores = (await import('../utils/zscore-calculator.js')).calculateAllZScores(
+        const zScores = calculateAllZScores(
           existingRecord.patient.gender as 'L' | 'P',
           ageInMonths,
           parseFloat(weight),

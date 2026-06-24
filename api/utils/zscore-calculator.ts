@@ -1,4 +1,4 @@
-import whoData from './who-data.json' assert { type: 'json' };
+import whoData from './who-data.json' with { type: 'json' };
 
 export function calculateLMSZScore(measurement: number, L: number, M: number, S: number): number {
   if (L === 0) {
