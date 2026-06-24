@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { prisma } from '../utils/db.js';
-import { verifyAuth } from '../utils/auth.js';
+import { prisma } from '../_utils/db.js';
+import { verifyAuth } from '../_utils/auth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);

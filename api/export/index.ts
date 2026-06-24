@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { prisma } from '../utils/db.js';
-import { verifyAuth } from '../utils/auth.js';
+import { prisma } from '../_utils/db.js';
+import { verifyAuth } from '../_utils/auth.js';
 
 function evaluateWFA(zScore: number) {
   if (zScore < -3) return 'Gizi Buruk (Severely Underweight)';
