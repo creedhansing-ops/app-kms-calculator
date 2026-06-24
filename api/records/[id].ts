@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { prisma } from '../_utils/db';
-import { verifyAuth } from '../_utils/auth';
-import { calculateAllZScores } from '../_utils/zscore-calculator';
+import { prisma } from '../../backend/db.js';
+import { verifyAuth } from '../../backend/auth.js';
+import { calculateAllZScores } from '../../backend/zscore-calculator.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = verifyAuth(req, res);
