@@ -10,7 +10,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     const {
       patientId, weight, height, headCircum, lila,
-      zScoreWFA, zScoreHFA, zScoreWFH, zScoreBMI,
       consultationNotes, diagnosis, intervention, target, nextVisit
     } = req.body;
 
